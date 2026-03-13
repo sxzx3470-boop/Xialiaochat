@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>微信聊天</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- 登录注册页面 -->
+  <div id="auth-container">
+    <div class="auth-box">
+      <h1>微信聊天</h1>
+      <div class="auth-tabs">
+        <button class="tab-btn active" onclick="showLogin()">登录</button>
+        <button class="tab-btn" onclick="showRegister()">注册</button>
+      </div>
+      
+      <form id="login-form" class="auth-form">
+        <input type="text" id="login-username" placeholder="用户名" required>
+        <input type="password" id="login-password" placeholder="密码" required>
+        <button type="submit" class="btn-primary">登录</button>
+      </form>
+      
+      <form id="register-form" class="auth-form" style="display: none;">
+        <input type="text" id="register-username" placeholder="用户名" required>
+        <input type="password" id="register-password" placeholder="密码" required>
+        <div class="password-requirements">
+          <p>密码要求：</p>
+          <ul>
+            <li>至少 8 位</li>
+            <li>必须包含数字</li>
+            <li>必须包含大写字母</li>
+            <li>必须包含小写字母</li>
+          </ul>
+        </div>
+        <button type="submit" class="btn-primary">注册</button>
+      </form>
+      
+      <div id="auth-message" class="message"></div>
+    </div>
+  </div>
+
+  <!-- 聊天主界面 -->
+  <div id="chat-container" style="display: none;">
+    <!-- 左侧边栏 -->
+    <div class="sidebar">
+      <div class="user-info">
+        <div class="avatar" id="current-user-avatar"></div>
+        <div class="user-details">
+          <div id="username-display" onclick="editUsername()" title="点击修改昵称">
+            <span id="current-username"></span>
+            <span class="edit-icon">✏️</span>
+          </div>
+          <span id="current-wechat-id" class="wechat-id" onclick="copyWechatId(this)" title="点击复制微信号"></span>
+        </div>
+        <button class="settings-btn" onclick="showSettings()" title="设置">⚙️</button>
+        <button class="logout-btn" onclick="logout()">退出</button>
+      </div>
+      
+      <!-- 设置面板 -->
+      <div id="settings-panel" class="settings-panel" style="display: none;">
+        <div class="settings-header">
+          <span>设置</span>
+          <button class="close-settings" onclick="closeSettings()">✕</button>
+        </div>
+        <div class="settings-content">
+          <div class="setting-item">
+            <label>头像</label>
+            <div class="avatar-section">
+              <div class="avatar-preview" id="settings-avatar-preview"></div>
+              <button class="change-avatar-btn" onclick="document.getElementById('avatar-input').click()">修改头像</button>
+              <input type="file" id="avatar-input" accept="image/jpeg,image/png,image/gif" style="display: none;" onchange="handleAvatarUpload(event)">
+            </div>
+          </div>
+          <div class="setting-item">
+            <label>我的微信号</label>
+            <div class="wechat-edit-group">
+              <input type="text" id="my-wechat-id">
+              <button class="save-wechat-btn" onclick="saveWechatId()">保存</button>
+            </div>
+            <div class="wechat-tip" id="wechat-modify-tip">微信号必须以字母开头，8 位以上</div>
+            <div class="wechat-modify-info" id="wechat-modify-info" style="display: none;">
+              <span class="info-icon">ℹ️</span>
+              <span id="next-modify-time"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 用户名编辑框 -->
+      <div id="username-editor" class="username-editor" style="display: none;">
+        <input type="text" id="username-input" placeholder="输入新昵称" maxlength="20" onkeypress="handleEditKeyPress(event)">
+        <div class="editor-actions">
+          <button class="save-btn" onclick="saveUsername()">保存</button>
+          <button class="cancel-btn" onclick="cancelEdit()">取消</button>
+        </div>
+      </div>
+      
+      <!-- 创建群聊面板 -->
+      <div id="create-group-panel" class="create-group-panel" style="display: none;">
+        <div class="panel-header">
+          <span>新建群聊</span>
+          <button class="close-panel" onclick="closeCreateGroupPanel()">✕</button>
+        </div>
+        <div class="panel-content">
+          <div class="form-group">
+            <label>群聊名称</label>
+            <input type="text" id="group-name-input" placeholder="请输入群聊名称">
+          </div>
+          <div class="form-group">
+            <label>选择好友</label>
+            <div id="group-friends-list" class="group-friends-list"></div>
+          </div>
+          <div class="panel-actions">
+            <button class="cancel-btn" onclick="closeCreateGroupPanel()">取消</button>
+            <button class="create-btn" onclick="createGroup()">创建群聊</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="search-box">
+        <input type="text" id="search-user" placeholder="搜索微信号或用户名">
+        <button onclick="searchUser()">搜索</button>
+      </div>
+      
+      <!-- 搜索结果展示区域 -->
+      <div id="search-result" class="search-result" style="display: none;">
+        <div class="result-header">
+          <span>搜索结果</span>
+          <button class="close-result" onclick="closeSearchResult()">✕</button>
+        </div>
+        <div class="result-content">
+          <div class="result-avatar" id="result-avatar"></div>
+          <div class="result-info">
+            <div class="result-name" id="result-name"></div>
+            <div class="result-wechat-id" id="result-wechat-id" onclick="copyWechatId(this)" title="点击复制微信号"></div>
+          </div>
+        </div>
+        <div class="result-actions">
+          <button class="add-friend-btn" id="add-friend-btn" onclick="sendAddRequest()">
+            <span>+</span> 添加好友
+          </button>
+        </div>
+      </div>
+      
+      <!-- 标签页切换 -->
+      <div class="tab-navigation">
+        <button class="nav-tab active" onclick="showTab('chat')">
+          <span>💬</span> 聊天
+        </button>
+        <button class="nav-tab" onclick="showTab('groups')">
+          <span>👨‍👩‍👧‍👦</span> 群聊
+        </button>
+        <button class="nav-tab" onclick="showTab('contacts')">
+          <span>👥</span> 通讯录
+          <span class="tab-badge" id="contacts-badge" style="display: none;">0</span>
+        </button>
+      </div>
+      
+      <!-- 聊天标签页 -->
+      <div id="chat-tab" class="tab-content">
+        <div class="friends-section">
+          <h3>最近聊天</h3>
+          <ul id="friends-list"></ul>
+        </div>
+      </div>
+      
+      <!-- 群聊标签页 -->
+      <div id="groups-tab" class="tab-content" style="display: none;">
+        <div class="groups-section">
+          <div class="section-header">
+            <h3>我的群聊</h3>
+            <button class="create-group-btn" onclick="showCreateGroupPanel()">+ 新建群聊</button>
+          </div>
+          <ul id="groups-list"></ul>
+        </div>
+      </div>
+      
+      <!-- 通讯录标签页 -->
+      <div id="contacts-tab" class="tab-content" style="display: none;">
+        <div class="contacts-section">
+          <div class="section-header">
+            <h3>好友请求</h3>
+            <span class="badge" id="request-badge" style="display: none;">0</span>
+          </div>
+          <ul id="friend-requests-list"></ul>
+          
+          <div class="section-header">
+            <h3>我的好友</h3>
+            <span class="friend-count" id="friend-count">0 人</span>
+          </div>
+          <ul id="contacts-list"></ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- 聊天区域 -->
+    <div class="chat-area">
+      <div id="no-chat" class="no-chat">
+        <p>选择一个好友开始聊天</p>
+      </div>
+      
+      <!-- 单聊聊天框 -->
+      <div id="chat-box" style="display: none;">
+        <div class="chat-header">
+          <div class="chat-avatar" id="chat-with-avatar"></div>
+          <div class="chat-header-info">
+            <span id="chat-with-name"></span>
+            <span id="chat-with-remark" class="chat-remark"></span>
+          </div>
+          <button class="chat-more" onclick="showChatMore()">⋯</button>
+        </div>
+        
+        <!-- 聊天更多面板 -->
+        <div id="chat-more-panel" class="chat-more-panel" style="display: none;">
+          <div class="chat-more-header">
+            <span>聊天信息</span>
+            <button class="close-chat-more" onclick="closeChatMore()">✕</button>
+          </div>
+          <div class="chat-more-content">
+            <div class="friend-remark-section">
+              <label>好友备注</label>
+              <div class="remark-input-group">
+                <input type="text" id="friend-remark-input" placeholder="给好友设置备注">
+                <button onclick="saveFriendRemark()">保存</button>
+              </div>
+              <div class="remark-tip">设置后将显示在聊天界面和好友列表</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="messages" id="messages"></div>
+        
+        <div class="message-input">
+        <button class="attach-btn" onclick="document.getElementById('file-input').click()" title="发送图片/视频">📷</button>
+        <input type="file" id="file-input" accept="image/*,video/*" style="display: none;" onchange="handleFileSelect(event)">
+        <button class="emoji-btn" onclick="toggleEmojiPanel()" title="表情">😊</button>
+        <input type="text" id="message-content" placeholder="输入消息..." onkeypress="handleKeyPress(event)">
+        <button onclick="sendMessage()" class="btn-send">发送</button>
+      </div>
+      
+      <!-- 表情包选择面板 -->
+      <div id="emoji-panel" class="emoji-panel" style="display: none;">
+        <div class="emoji-grid" id="emoji-grid"></div>
+      </div>
+      </div>
+      
+      <!-- 群聊聊天框 -->
+      <div id="group-chat-box" style="display: none;">
+        <div class="chat-header">
+          <div class="chat-avatar" id="group-chat-avatar"></div>
+          <div class="chat-header-info">
+            <span id="group-chat-name"></span>
+            <span id="group-member-count" class="chat-remark"></span>
+          </div>
+          <button class="chat-more" onclick="showGroupChatMore()">⋯</button>
+        </div>
+        
+        <!-- 群聊更多面板 -->
+        <div id="group-chat-more-panel" class="chat-more-panel" style="display: none;">
+          <div class="chat-more-header">
+            <span>群聊信息</span>
+            <button class="close-chat-more" onclick="closeGroupChatMore()">✕</button>
+          </div>
+          <div class="chat-more-content">
+            <div class="avatar-section">
+              <label>群头像</label>
+              <div class="avatar-preview" id="group-avatar-preview"></div>
+              <button class="change-avatar-btn" onclick="document.getElementById('group-avatar-input').click()">修改群头像</button>
+              <input type="file" id="group-avatar-input" accept="image/jpeg,image/png,image/gif" style="display: none;" onchange="handleGroupAvatarUpload(event)">
+            </div>
+            <div class="form-group">
+              <label>群聊名称</label>
+              <div class="remark-input-group">
+                <input type="text" id="group-name-edit" placeholder="输入新的群聊名称">
+                <button onclick="saveGroupName()">保存</button>
+              </div>
+            </div>
+            <div class="add-members-section">
+              <label>添加成员</label>
+              <button class="add-members-btn" onclick="showAddMembersPanel()">+ 拉好友进群</button>
+            </div>
+            <div class="group-members-list">
+              <label>群成员</label>
+              <div id="group-members-display"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="messages" id="group-messages"></div>
+        
+        <div class="message-input">
+        <button class="attach-btn" onclick="document.getElementById('group-file-input').click()" title="发送图片/视频">📷</button>
+        <input type="file" id="group-file-input" accept="image/*,video/*" style="display: none;" onchange="handleGroupFileSelect(event)">
+        <button class="emoji-btn" onclick="toggleGroupEmojiPanel()" title="表情">😊</button>
+        <input type="text" id="group-message-content" placeholder="输入消息..." onkeypress="handleGroupKeyPress(event)">
+        <button onclick="sendGroupMessage()" class="btn-send">发送</button>
+      </div>
+      
+      <!-- 群聊表情包选择面板 -->
+      <div id="group-emoji-panel" class="emoji-panel" style="display: none;">
+        <div class="emoji-grid" id="group-emoji-grid"></div>
+      </div>
+      </div>
+    </div>
+    
+    <!-- 拉好友进群面板 -->
+    <div id="add-members-panel" class="create-group-panel" style="display: none;">
+      <div class="panel-header">
+        <span>添加成员</span>
+        <button class="close-panel" onclick="closeAddMembersPanel()">✕</button>
+      </div>
+      <div class="panel-content">
+        <div class="form-group">
+          <label>选择好友</label>
+          <div id="add-members-friends-list" class="group-friends-list"></div>
+        </div>
+        <div class="panel-actions">
+          <button class="cancel-btn" onclick="closeAddMembersPanel()">取消</button>
+          <button class="create-btn" onclick="addMembersToGroup()">添加</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Twemoji - 标准化表情库 (锁定版本 14.0.2) -->
+  <script src="https://cdn.jsdelivr.net/npm/twemoji@14.0.2/dist/twemoji.min.js" crossorigin="anonymous"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
